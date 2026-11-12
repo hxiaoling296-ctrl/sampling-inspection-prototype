@@ -1,2 +1,4 @@
-# sampling-inspection-prototype
-抽检立项交互原型 V0.44
+# 抽检立项原型
+
+- [当前版本 V0.67](https://hxiaoling296-ctrl.github.io/sampling-inspection-prototype/)
+- [保留版本 V0.44](https://hxiaoling296-ctrl.github.io/sampling-inspection-prototype/versions/v0.44/)
