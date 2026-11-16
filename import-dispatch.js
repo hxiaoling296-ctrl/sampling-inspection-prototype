@@ -72,7 +72,7 @@ function applyDispatchImport(){
   for(const [batch,rows] of batches){
     const first=rows[0],agency=first['检测机构'];
     const t=newTask(first['商品编码'],first['抽检类型'],first['任务类型']);
-    t.importBatchId=batch;t.reason=first['抽检事由'];t.payer=first['费用支出方'];t.subs=[];
+    t.importBatchId=batch;t.reason=first['抽检事由'];t.payer=first['费用支出方']||defaultPayerForType(t.type);t.subs=[];
     const skus=new Map();
     for(const row of rows){
       const sku=row['立项SKU'];let sub=skus.get(sku);
