@@ -21,3 +21,5 @@ async function previewSamplingOrderImage(taskId,index){
   preview.document.title=item.name;preview.document.body.textContent='正在打开图片…';
   try{const blob=await loadReportBlob(item.id);if(!blob)throw Error('missing');const url=URL.createObjectURL(blob);preview.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),300000);}catch(e){preview.close();toast('图片读取失败，请检查浏览器中的文件');}
 }
+
+async function clearSamplingOnReturn(t){const ids=(t.samplingOrderImages||[]).map(item=>item.id).filter(Boolean);delete t.samplingAmount;delete t.samplingServiceFee;delete t.samplingRemark;t.samplingOrderImages=[];if(ids.length){try{await removeReportBlobs(ids);}catch(e){}}}

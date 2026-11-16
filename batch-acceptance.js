@@ -75,13 +75,13 @@ async function applyBatchAcceptance(){
   for(const t of eligible){
     const extra=values.get(t.id)||{},next=config.to||extra.next;
     if(batchAction==='确认接单')t.acceptedAt=new Date().toISOString();
-    if(['采样成功','采样并核样成功'].includes(batchAction)){t.samplingAmount=extra.amount;t.samplingRemark=extra.remark;}
+    if(['采样成功','采样并核样成功'].includes(batchAction)){t.samplingAmount=extra.amount;if(t.samplingServiceFee===undefined)t.samplingServiceFee=defaultSamplingServiceFee(t,t.samplingAmount);t.samplingRemark=extra.remark;}
     if(['核样成功','采样并核样成功'].includes(batchAction)){const now=new Date();saveExpectedDays(t,extra.days,now);t.enteredAt=now.toISOString();}
-    if(batchAction==='采样失败')delete t.samplingAmount;
+    if(batchAction==='采样失败'){delete t.samplingAmount;delete t.samplingServiceFee;}
     if(batchAction==='核样失败'){
       t.sampleCheckFailureReason=extra.reason;
       t.sampleReturnSucceeded=extra.returned;
-      t.sampleHandlingMethod=extra.handling;
+      t.sampleHandlingMethod=extra.handling;if(next==='待采样')await clearSamplingOnReturn(t);
     }
     t.status=next;
     t.subs.forEach(s=>{if(s.reportIssued)return;s.acceptanceStatus=next;if(batchAction==='拒绝接单')s.failureReason='机构拒绝接单';if(batchAction==='确认接单')s.failureReason='';});

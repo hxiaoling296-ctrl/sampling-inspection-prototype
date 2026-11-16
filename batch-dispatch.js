@@ -28,11 +28,11 @@ function updateBatchDispatchPreview(){
     const row=document.querySelector(`[data-batch-dispatch-task="${t.id}"]`);
     if(!row)continue;
     const active=agency&&['草稿','待派单','接单失败'].includes(t.status)?activeSubs(t,agency):[];
-    const allowed=active.length>0;
+    const allowed=active.length>0&&PAYERS.includes(t.payer);
     if(allowed){eligible++;subCount+=active.length;}
     row.classList.toggle('batch-ineligible',!!agency&&!allowed);
     row.querySelector('.batch-dispatch-projects').innerHTML=agency?t.subs.map(s=>`<div><strong>${esc(s.id)}</strong>${projectSummaryHTML(t,s,agency)}</div>`).join(''):'选择机构后展示';
-    row.querySelector('.batch-dispatch-eligibility').textContent=agency?(allowed?`派出 ${active.length} 个子任务`:'无可派检测项目'):'待选择机构';
+    row.querySelector('.batch-dispatch-eligibility').textContent=agency?(allowed?`派出 ${active.length} 个子任务`:!PAYERS.includes(t.payer)?'未选择费用支出方':'无可派检测项目'):'待选择机构';
   }
   document.getElementById('batch-dispatch-hint').textContent=agency?`本次可派 ${eligible} 个主任务、${subCount} 个有检测项目的子任务；其余主任务置灰，本次跳过。`:'请选择本次派单机构，查看各主任务的检测项目汇总。';
   const confirm=document.getElementById('batch-dispatch-confirm');confirm.disabled=!eligible;confirm.textContent=eligible?`确认派单 ${eligible} 个主任务`:'确认派单';
@@ -46,7 +46,7 @@ function confirmBatchDispatch(){
   if(!REFERENCE_AGENCIES.includes(agency)){error.textContent='请选择抽检机构';return;}
   if(!['商家寄样','机构采样','与辉寄样'].includes(shippingMethod)){error.textContent='请选择寄样方式';return;}
   if(dispatchRemark.length>200){error.textContent='派单备注最多输入200字';return;}
-  const eligible=batchDispatchTaskIds.map(id=>tasks.find(t=>t.id===id)).filter(t=>t&&['草稿','待派单','接单失败'].includes(t.status)&&activeSubs(t,agency).length);
+  const eligible=batchDispatchTaskIds.map(id=>tasks.find(t=>t.id===id)).filter(t=>t&&['草稿','待派单','接单失败'].includes(t.status)&&PAYERS.includes(t.payer)&&activeSubs(t,agency).length);
   if(!eligible.length){error.textContent='所选主任务没有可派的检测项目';return;}
   let subCount=0;
   for(const t of eligible)subCount+=applyDispatchToTask(t,{agency,reviewer,reason,shippingMethod,dispatchRemark});
