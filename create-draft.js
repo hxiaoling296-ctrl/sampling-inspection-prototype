@@ -1,0 +1,2 @@
+function applyCreatePlan(field){const id=field==='plannedSession'?'batch-create-planned-session':'batch-create-planned-spec',value=document.getElementById(id)?.value||'',limit=field==='plannedSession'?35:100;if(value.length>limit){document.getElementById(id).value=value.slice(0,limit);return;}for(const row of createRows)row[field]=value;for(const input of document.querySelectorAll(`[data-create-plan="${field}"]`))input.value=value;}
+function setCreatePlan(index,field,value){const row=createRows[index];if(!row)return;row[field]=value;}
