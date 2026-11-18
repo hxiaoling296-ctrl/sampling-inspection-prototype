@@ -53,11 +53,11 @@ function confirmPayment(id) {
   t.paymentShares=Object.fromEntries(shares.map(share=>[share.name,Number(share.value)]));
   items.forEach((item,i)=>{item.project.calculationFormula=projectCalculationFormula(item.project);item.project.settlementAmount=amounts[i];});
   const wasAbnormal=t.status==='异常结束';
-  t.paymentConfirmed=true;t.status=wasAbnormal?'款项确认':'已完成';save();closeModal();tabFilter='全部任务';query='';showList();toast(wasAbnormal?'款项已确认，主任务已在全部任务展示':'款项已确认，主任务已完成');
+  t.paymentConfirmed=true;t.status=wasAbnormal?'已完成（异常）':'已完成';save();closeModal();tabFilter='全部任务';query='';showList();toast(wasAbnormal?'款项已确认，主任务已完成（异常）':'款项已确认，主任务已完成');
 }
 
 function paymentSummaryHTML(t) {
-  if (!['款项确认','异常结束','已完成'].includes(t.status)) return '';
+  if (!['款项确认','异常结束','已完成','已完成（异常）'].includes(t.status)) return '';
   const items=paymentItems(t);
   return `<section class="summary payment-summary"><h2>款项确认${t.paymentConfirmed?' · 已确认':''}</h2><div class="summarygrid"><div><label>采样金额</label>${t.samplingAmount==null?'未填写':'¥ '+Number(t.samplingAmount).toFixed(2)}</div><div><label>采样服务费</label>${samplingFeeText(t)}</div><div><label>项目结算合计</label>${t.paymentConfirmed?'¥ '+items.reduce((sum,item)=>sum+Number(item.project.settlementAmount||0),0).toFixed(2):'待确认'}</div>${t.paymentConfirmed?Object.entries(t.paymentShares||{}).map(([name,amount])=>`<div><label>${esc(name)}结算金额</label>¥ ${Number(amount).toFixed(2)}</div>`).join(''):''}${t.paymentConfirmed?`<div><label>各方结算金额合计</label>¥ ${Object.values(t.paymentShares||{}).reduce((sum,amount)=>sum+Number(amount||0),0).toFixed(2)}</div>`:''}</div>${t.paymentConfirmed?`<div class="tablewrap"><table><thead><tr><th>子任务单号</th><th>检测项目</th><th>项目来源</th><th>项目计算公式</th><th>结算金额</th></tr></thead><tbody>${items.map(item=>`<tr><td>${copyCodeHTML(item.sub.id,'子任务单号')}</td><td>${esc(item.project.name)}</td><td>${esc(item.project.contractSource||'未选择')}</td><td>${esc(projectCalculationFormula(item.project))}</td><td>¥ ${Number(item.project.settlementAmount||0).toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`:''}</section>`;
 }
