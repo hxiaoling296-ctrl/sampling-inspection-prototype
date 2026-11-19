@@ -1,0 +1,3 @@
+function setNotesCollapsed(collapsed){const panel=document.querySelector('.notes'),button=document.getElementById('notes-toggle');if(!panel||!button)return;panel.classList.toggle('collapsed',collapsed);button.textContent=collapsed?'展开':'收起';button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',collapsed?'展开页面变更说明':'收起页面变更说明');try{sessionStorage.setItem('sampling-notes-collapsed',collapsed?'1':'0');}catch(e){}}
+function toggleNotes(){setNotesCollapsed(!document.querySelector('.notes')?.classList.contains('collapsed'));}
+try{setNotesCollapsed(sessionStorage.getItem('sampling-notes-collapsed')==='1');}catch(e){setNotesCollapsed(false);}
