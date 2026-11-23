@@ -71,7 +71,7 @@ function confirmBatchDispatch(){
   if(dispatchRemark.length>200){error.textContent='派单备注最多输入200字';return;}
   const eligible=batchDispatchTaskIds.map(id=>({t:tasks.find(t=>t.id===id),row:document.querySelector(`[data-batch-dispatch-task="${id}"]`)})).filter(({t,row})=>t&&row&&['草稿','待派单','接单失败'].includes(t.status)&&PAYERS.includes(t.payer)&&(!requiresInvoiceInfo(t.payer)||!!row.querySelector('[data-batch-invoice]').value.trim())&&agencyAllowedForTask(t,row.querySelector('[data-batch-agency]').value)&&activeSubs(t,row.querySelector('[data-batch-agency]').value).length);
   if(!eligible.length){error.textContent='所选主任务没有可派的检测项目';return;}
-  if(eligible.some(({t,row})=>activeSubs(t,row.querySelector('[data-batch-agency]').value).some(s=>!s.category?.trim()))){error.textContent='请先补全可派子任务的国抽分类';return;}
+  if(eligible.some(({t,row})=>activeSubs(t,row.querySelector('[data-batch-agency]').value).some(s=>!s.category?.trim()))){error.textContent='请先补全可派子任务的立项要求分类';return;}
   if(eligible.some(({row})=>{const values=batchDispatchRowValues(row);return !REVIEWERS.includes(values.reviewer)||!agencyAllowedForTask(tasks.find(t=>t.id===row.closest('[data-batch-dispatch-task]').dataset.batchDispatchTask),values.agency)||!['商家寄样','机构采样','与辉寄样'].includes(values.shippingMethod)})){error.textContent='请补全可派主任务的报告审核人、派单机构和寄样方式';return;}
   try{checkDispatchNumberCapacity(eligible.map(({t,row})=>({task:t,agency:row.querySelector('[data-batch-agency]').value})));}catch(e){error.textContent=e.message;return;}
   if(!saveBatchDispatchDraft(false))return;

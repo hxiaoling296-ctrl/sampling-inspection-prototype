@@ -1,5 +1,5 @@
-const DISPATCH_IMPORT_HEADERS=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','报告审核人','寄样方式','立项SKU','国抽分类','检测项目','项目类型','项目来源','附加物备注','检测方法','判定依据/限值','检测机构','选择机构原由','派单备注'];
-const DISPATCH_IMPORT_REQUIRED=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','报告审核人','寄样方式','立项SKU','国抽分类','检测项目','项目类型','检测方法','检测机构'];
+const DISPATCH_IMPORT_HEADERS=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目类型','项目来源','附加物备注','检测方法','判定依据/限值','检测机构','选择机构原由','派单备注'];
+const DISPATCH_IMPORT_REQUIRED=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目类型','检测方法','检测机构'];
 const DISPATCH_IMPORT_MAIN=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','检测机构','报告审核人','寄样方式','选择机构原由','派单备注'];
 const DISPATCH_PROJECT_TYPES={'国抽':'国抽项','与辉要求':'与辉要求','宣称项目':'宣称'};
 let dispatchImportRows=[];
@@ -33,7 +33,7 @@ function validateDispatchImport(rows){
       const previous=products.get(code);
       if(previous){for(const h of DISPATCH_IMPORT_MAIN)if(previous[h]!==r[h])errors.push(`第${r.line}行：同一商品编码的${h}须一致`);}
       else products.set(code,r);
-      if(sku){const key=code+'\u0000'+sku,category=skuCategories.get(key);if(category!==undefined&&category!==r['国抽分类'])errors.push(`第${r.line}行：同一立项SKU的国抽分类须一致`);else skuCategories.set(key,r['国抽分类']);}
+      if(sku){const key=code+'\u0000'+sku,category=skuCategories.get(key);if(category!==undefined&&category!==r['立项要求分类'])errors.push(`第${r.line}行：同一立项SKU的立项要求分类须一致`);else skuCategories.set(key,r['立项要求分类']);}
       if(sku&&r['检测项目']){const key=code+'\u0000'+sku+'\u0000'+r['检测项目'];if(projectKeys.has(key))errors.push(`第${r.line}行：同一SKU的检测项目重复`);projectKeys.add(key);}
     }
   }
@@ -71,7 +71,7 @@ function applyDispatchImport(){
     const skus=new Map();
     for(const row of rows){
       const sku=row['立项SKU'];let sub=skus.get(sku);
-      if(!sub){const index=skus.size+1;sub={id:t.id+'-'+String(index).padStart(2,'0'),standard:productExecutionStandards(t).join('、'),category:row['国抽分类'],projects:[],agencyProjects:[],fields:{sku,rush:'否'},payer:'',merchant:'',yuhui:'',reportIssued:false,sent:false};skus.set(sku,sub);t.subs.push(sub);}
+      if(!sub){const index=skus.size+1;sub={id:t.id+'-'+String(index).padStart(2,'0'),standard:productExecutionStandards(t).join('、'),category:row['立项要求分类'],projects:[],agencyProjects:[],fields:{sku,rush:'否'},payer:'',merchant:'',yuhui:'',reportIssued:false,sent:false};skus.set(sku,sub);t.subs.push(sub);}
       const project={name:row['检测项目'],method:row['检测方法'],limit:row['判定依据/限值'],group:DISPATCH_PROJECT_TYPES[row['项目类型']],selected:true,contractSource:row['项目来源']||'合同内'};
       if(row['附加物备注'])project.agencyAttachments={[agency]:row['附加物备注']};
       sub.projects.push(project);

@@ -1,6 +1,6 @@
 let importTableRows=[];
-const IMPORT_HEADERS=['主任务单号','主任务状态','子任务单号','计划出具报告日期','立项SKU','国抽分类','采样金额','采样服务费','检测机构','检测项目','检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价'];
-const IMPORT_TEMPLATE_HEADERS=['主任务单号（必填）','主任务状态（必填）','子任务单号（必填）','计划出具报告日期（选填，默认7天后）','立项SKU（必填）','国抽分类（必填）','采样金额（直接进单时必填）','采样服务费','检测机构（选填，默认派单机构）','检测项目','检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价'];
+const IMPORT_HEADERS=['主任务单号','主任务状态','子任务单号','计划出具报告日期','立项SKU','立项要求分类','采样金额','采样服务费','检测机构','检测项目','检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价'];
+const IMPORT_TEMPLATE_HEADERS=['主任务单号（必填）','主任务状态（必填）','子任务单号（必填）','计划出具报告日期（选填，默认7天后）','立项SKU（必填）','立项要求分类（必填）','采样金额（直接进单时必填）','采样服务费','检测机构（选填，默认派单机构）','检测项目','检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价'];
 const IMPORT_TEMPLATE_NOTE_ROW=['','只能更新为采样中，核样中，已进单',...Array(IMPORT_HEADERS.length-2).fill('')];
 function parseCsv(text){text=text.replace(/^\uFEFF/,'');let rows=[],row=[],value='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){value+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){row.push(value);value='';}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(value);if(row.some(v=>v.trim()))rows.push(row);row=[];value='';}else value+=ch;}row.push(value);if(row.some(v=>v.trim()))rows.push(row);return rows;}
 async function parseXlsx(file){
@@ -35,7 +35,7 @@ function validateImport(rows){
   if(!rows.length)errors.push('表格中没有任务数据');
   for(const r of rows){
     const line='第'+r.line+'行：';
-    for(const field of ['主任务单号','主任务状态','子任务单号','立项SKU','国抽分类'])if(!r[field])errors.push(line+'请填写'+field);
+    for(const field of ['主任务单号','主任务状态','子任务单号','立项SKU','立项要求分类'])if(!r[field])errors.push(line+'请填写'+field);
     const t=tasks.find(item=>item.id===r['主任务单号']);
     const sub=t?.subs.find(item=>item.id===r['子任务单号']);
     if(!t||!['待接单','待采样','核样中'].includes(t.status)){errors.push(line+'主任务不存在或不在确认接单中');continue;}
@@ -55,8 +55,8 @@ function validateImport(rows){
     const taskKey=t.id,taskValue=[target,r['采样金额'],r['采样服务费']].join('|');
     if(taskValues.has(taskKey)&&taskValues.get(taskKey)!==taskValue)errors.push(line+'同一主任务的状态、采样金额或采样服务费须一致');
     taskValues.set(taskKey,taskValue);
-    const subKey=t.id+'|'+sub.id,subValue=[r['立项SKU'],r['国抽分类'],date,r['检测机构']].join('|');
-    if(subValues.has(subKey)&&subValues.get(subKey)!==subValue)errors.push(line+'同一子任务的立项SKU、国抽分类、计划日期及机构须一致');
+    const subKey=t.id+'|'+sub.id,subValue=[r['立项SKU'],r['立项要求分类'],date,r['检测机构']].join('|');
+    if(subValues.has(subKey)&&subValues.get(subKey)!==subValue)errors.push(line+'同一子任务的立项SKU、立项要求分类、计划日期及机构须一致');
     subValues.set(subKey,subValue);
     if(r['检测项目']){const key=subKey+'|'+r['检测项目'];if(projectKeys.has(key))errors.push(line+'同一子任务的检测项目重复');projectKeys.add(key);}
   }
@@ -79,7 +79,7 @@ function applyImportTable(){
     t.status=r['主任务状态'];activeOrderSubs(t).forEach(s=>s.acceptanceStatus=t.status);
     if(r['采样金额'])t.samplingAmount=Number(r['采样金额']);
     if(r['采样服务费'])t.samplingServiceFee=Number(r['采样服务费']);
-    sub.fields||={};sub.fields.sku=r['立项SKU'];sub.category=r['国抽分类'];
+    sub.fields||={};sub.fields.sku=r['立项SKU'];sub.category=r['立项要求分类'];
     if(t.status==='已进单')saveExpectedDays(t,new Map([[sub.id,r['计划出具报告日期']||localDateValue(expectedDeadlineAt(7))]]));
     if(r['检测机构'])sub.agency=r['检测机构'];
     if(!r['检测项目'])continue;
