@@ -19,7 +19,7 @@ function validateDispatchImport(rows){
     if(code&&!/^(ry|sp)/i.test(code))errors.push(`第${r.line}行：商品编码须以 ry 或 SP 开头`);
     if(r['抽检类型']&&!TYPES.includes(r['抽检类型']))errors.push(`第${r.line}行：抽检类型不在当前选项中`);
     if(r['任务类型']&&!TASK_TYPES.includes(r['任务类型']))errors.push(`第${r.line}行：任务类型不在当前选项中`);
-    if(r['检测机构']&&!REFERENCE_AGENCIES.includes(r['检测机构']))errors.push(`第${r.line}行：检测机构不在当前选项中`);
+    if(r['检测机构']&&!agenciesForProductCode(code).includes(r['检测机构']))errors.push(`第${r.line}行：检测机构不属于当前商品类目`);
     if(r['报告审核人']&&!REVIEWERS.includes(r['报告审核人']))errors.push(`第${r.line}行：报告审核人不在当前选项中`);
     if(r['寄样方式']&&!['商家寄样','机构采样','与辉寄样'].includes(r['寄样方式']))errors.push(`第${r.line}行：寄样方式不在当前选项中`);
     if(r['费用支出方']&&!PAYERS.includes(r['费用支出方']))errors.push(`第${r.line}行：费用支出方不在当前选项中`);
@@ -63,7 +63,7 @@ function applyDispatchImport(){
   const error=document.getElementById('dispatch-import-error');if(!error)return;
   const issues=validateDispatchImport(dispatchImportRows);if(issues.length){error.textContent=issues.slice(0,8).join('；');return;}
   const products=new Map();for(const row of dispatchImportRows){const list=products.get(row['商品编码'])||[];list.push(row);products.set(row['商品编码'],list);}
-  const fresh=[];
+  const fresh=[],assignments=[];
   for(const rows of products.values()){
     const first=rows[0],agency=first['检测机构'];
     const t=newTask(first['商品编码'],first['抽检类型'],first['任务类型']);
@@ -76,8 +76,10 @@ function applyDispatchImport(){
       if(row['附加物备注'])project.agencyAttachments={[agency]:row['附加物备注']};
       sub.projects.push(project);
     }
-    applyDispatchToTask(t,{agency,reviewer:first['报告审核人'],reason:first['选择机构原由'],shippingMethod:first['寄样方式'],dispatchRemark:first['派单备注']});
+    assignments.push({task:t,agency,reviewer:first['报告审核人'],reason:first['选择机构原由'],shippingMethod:first['寄样方式'],dispatchRemark:first['派单备注']});
     fresh.push(t);
   }
+  try{checkDispatchNumberCapacity(assignments);for(const {task,agency,reviewer,reason,shippingMethod,dispatchRemark} of assignments)applyDispatchToTask(task,{agency,reviewer,reason,shippingMethod,dispatchRemark});}
+  catch(e){error.textContent=e.message;return;}
   tasks.unshift(...fresh);save();dispatchImportRows=[];closeModal();tabFilter='确认接单中';query='';showList();toast(`导入并派单成功：${fresh.length} 个主任务进入待接单`);
 }

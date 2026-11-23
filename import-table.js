@@ -48,7 +48,7 @@ function validateImport(rows){
     if(date&&!validPlannedReportDate(date))errors.push(line+'计划出具报告日期格式须为YYYY-MM-DD');
     for(const field of ['采样金额','采样服务费','机构参考报价','机构实际报价'])if(r[field]&&!/^\d+(?:\.\d{1,2})?$/.test(r[field]))errors.push(line+field+'须为非负金额，最多两位小数');
     if(r['附加物备注'].length>35)errors.push(line+'附加物备注最多35字');
-    if(r['检测机构']&&!REFERENCE_AGENCIES.includes(r['检测机构']))errors.push(line+'检测机构不在当前选项中');
+    if(r['检测机构']&&!agencyAllowedForTask(t,r['检测机构']))errors.push(line+'检测机构不属于当前商品类目');
     if(r['检测机构']&&t.agency&&r['检测机构']!==t.agency)errors.push(line+'检测机构须与主任务派单机构一致');
     if(r['项目来源']&&!['合同内','合同外'].includes(r['项目来源']))errors.push(line+'项目来源只能填合同内或合同外');
     if(!r['检测项目']&&['检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价'].some(field=>r[field]))errors.push(line+'填写项目内容时须填写检测项目');

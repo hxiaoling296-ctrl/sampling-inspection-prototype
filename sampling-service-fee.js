@@ -1,4 +1,4 @@
-function samplingServiceFeeRate(t){const agency=String(t?.agency||'').trim();if(!agency)return 0;if(agency.toUpperCase()==='SGS'||agency==='广检'||agency.includes('广州检验检测')||agency.includes('华测')||agency.includes('天祥')||agency.includes('长春海关'))return 0.06;if(agency.includes('诺安'))return 0.12;if(agency.includes('欧陆'))return 0.08;return 0;}
+function samplingServiceFeeRate(t){const agency=String(t?.agency||'').trim();if(!agency)return 0;if(agency==='通标标准技术服务有限公司'||agency==='广州检验检测认证集团有限公司'||agency==='华测检测认证集团股份有限公司'||agency==='上海天祥质量技术服务有限公司'||agency==='长春海关技术中心')return 0.06;if(agency==='欧陆食品检测服务（大连）有限公司')return 0.08;return 0;}
 function defaultSamplingServiceFee(t,amount){const rate=samplingServiceFeeRate(t);return rate&&amount!==''&&amount!=null&&Number.isFinite(Number(amount))?Math.round(Number(amount)*rate*100)/100:'';}
 function samplingServiceFeeValue(t){return t.samplingServiceFee===undefined?defaultSamplingServiceFee(t,t.samplingAmount):t.samplingServiceFee;}
 function samplingFeeOverLimit(t,amount,fee){return !!samplingServiceFeeRate(t)&&fee!==''&&fee!=null&&amount!==''&&amount!=null&&Number(fee)>defaultSamplingServiceFee(t,amount)+0.000001;}
