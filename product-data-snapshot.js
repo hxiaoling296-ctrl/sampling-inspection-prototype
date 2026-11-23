@@ -1,0 +1,7 @@
+function productSpecificationSource(t){const rows=PRODUCT_INFO_VALUES[t.code]?.specifications||PRODUCT_SPECIFICATIONS[t.code]||[[(t.name||t.code)+' 1 件','']];return rows.map(([spec,gift])=>[String(spec||''),String(gift||'')]);}
+function productOrderImageSource(t){return PRODUCT_INFO_VALUES[t.code]?.orderImage||t.subs.find(s=>s.packageImage)?.packageImage||PRODUCT_IMAGE;}
+function orderImageForTask(t){return t.orderImageSnapshot||productOrderImageSource(t);}
+function lockProductDataAtDispatch(t){if(t.productDataLockedAt)return;t.productSpecifications=productSpecificationSource(t);t.orderImageSnapshot=productOrderImageSource(t);t.packageSelected=!!t.orderImageSnapshot;t.productDataLockedAt=new Date().toISOString();}
+function migrateProductDataSnapshots(){let changed=false;for(const t of tasks){if(!t.dispatchedAt||t.productDataLockedAt)continue;t.productSpecifications=productSpecifications(t).map(row=>[...row]);t.orderImageSnapshot=productOrderImageSource(t);if(t.packageSelected===undefined)t.packageSelected=!!t.orderImageSnapshot;t.productDataLockedAt=t.dispatchedAt;changed=true;}if(changed)save();}
+function refreshProductSpecifications(){const t=task();if(!t)return;t.productSpecifications=productSpecificationSource(t);t.productSpecificationsRefreshedAt=new Date().toISOString();save();renderDetail();toast('商品售卖规格和赠品信息已更新');}
+function refreshOrderImage(){const t=task();if(!t)return;t.orderImageSnapshot=productOrderImageSource(t);t.packageSelected=!!t.orderImageSnapshot;t.packageUpdatedAt=new Date().toISOString();save();renderDetail();toast('下单图片已更新');}

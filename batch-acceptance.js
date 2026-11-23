@@ -9,7 +9,7 @@ const BATCH_ACTIONS={
   '核样成功':{from:'核样中',to:'已进单'},
   '核样失败':{from:'核样中',to:null}
 };
-function batchEligible(t,config){return Array.isArray(config.from)?config.from.includes(t.status):t.status===config.from;}
+function batchEligible(t,config){return activeOrderSubs(t).length>0&&(Array.isArray(config.from)?config.from.includes(t.status):t.status===config.from);}
 function syncBatchSelection(rows){const visible=new Set(tabFilter==='确认接单中'?rows.map(t=>t.id):[]);for(const id of batchSelectedTasks)if(!visible.has(id))batchSelectedTasks.delete(id);updateBatchSelectionUI();}
 function updateBatchSelectionUI(){const count=document.getElementById('batch-count'),button=document.getElementById('batch-action-button'),all=document.getElementById('batch-select-all'),menu=document.getElementById('batch-action-menu');if(count)count.textContent=`已选 ${batchSelectedTasks.size} 条`;if(button)button.disabled=!batchSelectedTasks.size;if(menu&&!batchSelectedTasks.size)menu.hidden=true;if(all){const boxes=[...document.querySelectorAll('.batch-task-check')];all.checked=!!boxes.length&&boxes.every(box=>box.checked);all.indeterminate=boxes.some(box=>box.checked)&&!all.checked;}}
 function toggleBatchTask(id,checked){if(checked)batchSelectedTasks.add(id);else batchSelectedTasks.delete(id);updateBatchSelectionUI();}
@@ -30,8 +30,8 @@ function openBatchAcceptance(action){
   const rows=chosen.map((t,i)=>{
     const allowed=batchEligible(t,config);
     const amount=amountAction?`<td>${allowed?`<input id="batch-amount-${i}" aria-label="${esc(t.id)}采样金额" type="number" min="0" step="0.01" value="${esc(t.samplingAmount??'')}" placeholder="请输入金额" oninput="syncSamplingFeeInput('${t.id}','batch-amount-${i}','batch-service-fee-${i}')">`:'—'}</td><td>${allowed?`<input id="batch-service-fee-${i}" aria-label="${esc(t.id)}采样服务费" class="${samplingFeeOverLimit(t,t.samplingAmount,samplingServiceFeeValue(t))?'sampling-fee-over':''}" type="number" min="0" step="0.01" value="${esc(samplingServiceFeeValue(t))}" oninput="touchSamplingFeeInput('${t.id}','batch-amount-${i}','batch-service-fee-${i}')">`:'—'}</td><td>${allowed?`<textarea id="batch-remark-${i}" maxlength="200" aria-label="${esc(t.id)}采样备注" placeholder="最多200字">${esc(t.samplingRemark||'')}</textarea>`:'—'}</td><td>${allowed?`<div class="batch-sampling-images">${(t.samplingOrderImages||[]).map((image,j)=>`<button class="link" type="button" onclick="previewSamplingOrderImage('${t.id}',${j})">${esc(image.name)}</button>`).join('')}<input id="batch-sampling-images-${i}" type="file" accept="image/*" multiple aria-label="${esc(t.id)}采样订单图片" onchange="updateBatchSamplingImageSelection(${i})"><small id="batch-sampling-image-selection-${i}">未选择图片</small></div>`:'—'}</td>`:'';
-    const merchantSample=action==='确认接单'?`<td>${allowed&&t.payer==='商家'?t.subs.map((s,j)=>`<div class="batch-deadline-input"><span>${esc(s.id)}</span><input id="batch-sample-quantity-${i}-${j}" maxlength="100" aria-label="${esc(s.id)}样品量" value="${esc(s.sampleQuantity||'')}"><input id="batch-address-${i}-${j}" maxlength="200" aria-label="${esc(s.id)}寄样地址" value="${esc(merchantAddress(s))}"></div>`).join(''):'—'}</td>`:'';
-    const deadline=deadlineAction?`<td>${allowed?t.subs.map((s,j)=>`<div class="batch-deadline-input"><span>${esc(s.id)}</span>${expectedDaysInput(s,`batch-expected-${i}-${j}`)}</div>`).join(''):'—'}</td>`:'';
+    const merchantSample=action==='确认接单'?`<td>${allowed&&t.payer==='商家'?t.subs.map((s,j)=>isActiveSub(t,s)?`<div class="batch-deadline-input"><span>${esc(s.id)}</span><input id="batch-sample-quantity-${i}-${j}" maxlength="100" aria-label="${esc(s.id)}样品量" value="${esc(s.sampleQuantity||'')}"><input id="batch-address-${i}-${j}" maxlength="200" aria-label="${esc(s.id)}寄样地址" value="${esc(merchantAddress(s))}"></div>`:'').join(''):'—'}</td>`:'';
+    const deadline=deadlineAction?`<td>${allowed?t.subs.map((s,j)=>isActiveSub(t,s)?`<div class="batch-deadline-input"><span>${esc(s.id)}</span>${expectedDaysInput(s,`batch-expected-${i}-${j}`)}</div>`:'').join(''):'—'}</td>`:'';
     const failure=failureAction?`<td>${allowed?`<input id="batch-reason-${i}" aria-label="${esc(t.id)}核样失败原因" placeholder="请输入原因">`:'—'}</td><td>${allowed?`<select id="batch-next-${i}" aria-label="${esc(t.id)}失败后状态"><option value="">请选择</option><option value="核样中">保持核样中</option><option value="待采样">退回待采样</option></select>`:'—'}</td><td>${allowed?`<label><input id="batch-return-${i}-yes" type="radio" name="batch-return-${i}" value="是">是</label><label><input id="batch-return-${i}-no" type="radio" name="batch-return-${i}" value="否">否</label>`:'—'}</td><td>${allowed?`<textarea id="batch-handling-${i}" maxlength="200" aria-label="${esc(t.id)}样品处理方式" placeholder="最多200字"></textarea>`:'—'}</td><td>${allowed?`<input id="batch-failure-images-${i}" type="file" accept="image/*" multiple aria-label="${esc(t.id)}采样订单图片">`:'—'}</td>`:'';
     return `<tr class="${allowed?'':'batch-ineligible'}" data-batch-task="${esc(t.id)}"><td>${esc(t.id)}</td><td>${esc(t.code)}</td><td>${statusBadge(t.status)}</td><td>${allowed?'可操作':'不可操作'}</td>${amount}${merchantSample}${deadline}${failure}</tr>`;
   }).join('');
@@ -47,7 +47,7 @@ async function applyBatchAcceptance(){
   const values=new Map();
   for(const [i,t] of chosen.entries()){
     if(!batchEligible(t,config))continue;
-    if(batchAction==='确认接单'&&t.payer==='商家'){if(!t.invoiceInfo?.trim()){error.textContent=`${t.id}：请先填写开票信息`;return;}const samples=t.subs.map((s,j)=>({quantity:document.getElementById(`batch-sample-quantity-${i}-${j}`)?.value.trim()||'',description:document.getElementById(`batch-address-${i}-${j}`)?.value.trim()||''}));if(samples.some(v=>v.quantity.length>100||v.description.length>200)){error.textContent=`${t.id}：样品量最多100字，寄样地址最多200字`;return;}values.set(t.id,{samples});}
+    if(batchAction==='确认接单'&&requiresInvoiceInfo(t.payer)&&!t.invoiceInfo?.trim()){error.textContent=`${t.id}：请先填写开票信息`;return;}if(batchAction==='确认接单'&&t.payer==='商家'){const samples=t.subs.map((s,j)=>({quantity:document.getElementById(`batch-sample-quantity-${i}-${j}`)?.value.trim()||'',description:document.getElementById(`batch-address-${i}-${j}`)?.value.trim()||''}));if(samples.some(v=>v.quantity.length>100||v.description.length>200)){error.textContent=`${t.id}：样品量最多100字，寄样地址最多200字`;return;}values.set(t.id,{samples});}
     if(['采样成功','采样并核样成功'].includes(batchAction)){
       const raw=document.getElementById('batch-amount-'+i)?.value.trim()||'';
       if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){error.textContent=`${t.id}：请输入不小于 0 且最多两位小数的采样金额`;return;}
@@ -83,7 +83,7 @@ async function applyBatchAcceptance(){
   if(batchAction==='核样失败'){const button=document.querySelector('#modal .dialogfooter .primary');button.disabled=true;try{for(const t of eligible)await saveSampleFailureImages(t,values.get(t.id).images);}catch(e){error.textContent='图片保存失败，请检查浏览器存储空间';button.disabled=false;return;}}
   for(const t of eligible){
     const extra=values.get(t.id)||{},next=config.to||extra.next;
-    if(batchAction==='确认接单'){t.acceptedAt=new Date().toISOString();if(t.payer==='商家')t.subs.forEach((s,i)=>{s.sampleQuantity=extra.samples[i].quantity;s.shippingAddress=extra.samples[i].description;});}
+    if(batchAction==='确认接单'){t.acceptedAt=new Date().toISOString();if(t.payer==='商家')t.subs.forEach((s,i)=>{if(!isActiveSub(t,s))return;s.sampleQuantity=extra.samples[i].quantity;s.shippingAddress=extra.samples[i].description;});}
     if(['采样成功','采样并核样成功'].includes(batchAction)){t.samplingAmount=extra.amount;t.samplingServiceFee=extra.fee;t.samplingRemark=extra.remark;if(extra.imageEntries.length)t.samplingOrderImages=[...(t.samplingOrderImages||[]),...extra.imageEntries.map(({id,file})=>({id,name:file.name,type:file.type,size:file.size}))];}
     if(['核样成功','采样并核样成功'].includes(batchAction)){const now=new Date();saveExpectedDays(t,extra.days,now);t.enteredAt=now.toISOString();}
     if(batchAction==='采样失败'){delete t.samplingAmount;delete t.samplingServiceFee;}
@@ -93,7 +93,7 @@ async function applyBatchAcceptance(){
       t.sampleHandlingMethod=extra.handling;if(next==='待采样')await clearSamplingOnReturn(t);
     }
     t.status=next;
-    t.subs.forEach(s=>{if(s.reportIssued)return;s.acceptanceStatus=next;if(batchAction==='拒绝接单')s.failureReason='机构拒绝接单';if(batchAction==='确认接单')s.failureReason='';});
+    t.subs.forEach(s=>{if(!isActiveSub(t,s)||s.reportIssued)return;s.acceptanceStatus=next;if(batchAction==='拒绝接单')s.failureReason='机构拒绝接单';if(batchAction==='确认接单')s.failureReason='';});
   }
   save();const done=batchAction,count=eligible.length;batchSelectedTasks.clear();batchTaskIds=[];batchAction='';closeModal();searchList();toast(`批量${done}成功：${count} 个主任务`);
 }
