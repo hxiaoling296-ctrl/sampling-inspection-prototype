@@ -1,10 +1,11 @@
-const DISPATCH_IMPORT_HEADERS=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目类型','项目来源','附加物备注','检测方法','判定依据/限值','检测机构','选择机构原由','派单备注'];
-const DISPATCH_IMPORT_REQUIRED=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目类型','检测方法','检测机构'];
+const DISPATCH_IMPORT_HEADERS=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目类型','项目分类','项目来源','附加物备注','检测方法','判定依据/限值','检测机构','选择机构原由','派单备注'];
+const DISPATCH_IMPORT_REQUIRED=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','报告审核人','寄样方式','立项SKU','立项要求分类','检测项目','项目分类','检测方法','检测机构'];
 const DISPATCH_IMPORT_MAIN=['商品编码','抽检类型','任务类型','抽检事由','费用支出方','开票信息','检测机构','报告审核人','寄样方式','选择机构原由','派单备注'];
 const DISPATCH_PROJECT_TYPES={'国抽':'国抽项','与辉要求':'与辉要求','宣称项目':'宣称'};
 let dispatchImportRows=[];
 function dispatchImportRecords(matrix){
   const head=(matrix[0]||[]).map(v=>String(v??'').trim().replace(/（.*$/, ''));
+  if(!head.includes('项目分类')&&head.includes('项目类型'))head[head.indexOf('项目类型')]='项目分类';
   const indexes=Object.fromEntries(DISPATCH_IMPORT_HEADERS.map(h=>[h,head.indexOf(h)]));
   const missing=DISPATCH_IMPORT_REQUIRED.filter(h=>indexes[h]<0);
   if(missing.length)throw Error('缺少模板字段：'+missing.join('、'));
@@ -23,9 +24,12 @@ function validateDispatchImport(rows){
     if(r['报告审核人']&&!REVIEWERS.includes(r['报告审核人']))errors.push(`第${r.line}行：报告审核人不在当前选项中`);
     if(r['寄样方式']&&!['商家寄样','机构采样','与辉寄样'].includes(r['寄样方式']))errors.push(`第${r.line}行：寄样方式不在当前选项中`);
     if(r['费用支出方']&&!PAYERS.includes(r['费用支出方']))errors.push(`第${r.line}行：费用支出方不在当前选项中`);
-    if(requiresInvoiceInfo(r['费用支出方'])&&!r['开票信息'])errors.push(`第${r.line}行：费用支出方为商家或二者皆有时须填写开票信息`);
-    if(r['开票信息'].length>200)errors.push(`第${r.line}行：开票信息最多200字`);
-    if(r['项目类型']&&!Object.hasOwn(DISPATCH_PROJECT_TYPES,r['项目类型']))errors.push(`第${r.line}行：项目类型只能填国抽、与辉要求或宣称项目`);
+    const invoice=parseInvoiceText(r['开票信息']);
+    if(!invoicePairValid(invoice.title,invoice.taxNumber))errors.push(`第${r.line}行：发票抬头和税号须同时填写`);
+    if(requiresInvoiceInfo(r['费用支出方'])&&(!invoice.title||!invoice.taxNumber))errors.push(`第${r.line}行：开票信息须按“发票抬头；税号”填写两项`);
+    if(invoice.title.length>200||invoice.taxNumber.length>200)errors.push(`第${r.line}行：发票抬头和税号各最多200字`);
+    if(r['项目分类']&&!Object.hasOwn(DISPATCH_PROJECT_TYPES,r['项目分类']))errors.push(`第${r.line}行：项目分类只能填国抽、与辉要求或宣称项目`);
+    if(r['项目类型']&&!['单项','套餐'].includes(r['项目类型']))errors.push(`第${r.line}行：项目类型只能填单项或套餐`);
     if(r['项目来源']&&!['合同内','合同外'].includes(r['项目来源']))errors.push(`第${r.line}行：项目来源只能填合同内或合同外`);
     if(r['附加物备注'].length>100)errors.push(`第${r.line}行：附加物备注最多100字`);
     if(r['派单备注'].length>200)errors.push(`第${r.line}行：派单备注最多200字`);
@@ -42,7 +46,7 @@ function validateDispatchImport(rows){
 function openDispatchImport(){
   if(tabFilter!=='全部任务')return;
   dispatchImportRows=[];
-  document.getElementById('modal').innerHTML=`<div class="overlay"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dispatch-import-title" style="width:1000px"><div class="dialoghead"><h2 id="dispatch-import-title">导入数据派单</h2><button aria-label="关闭弹窗" onclick="closeModal()">×</button></div><div class="dialogbody"><p>请使用下方 Excel 模板填写。每行对应一个立项 SKU 的一个检测项目；同一商品编码的多行合并为一个主任务，不同 SKU 分别生成子任务。同一商品的主任务信息须一致。表头注明必填或选填；开票信息在费用支出方为商家或二者皆有时必填。确认后任务直接进入待接单。</p><button onclick="downloadDispatchImportTemplate()">下载 Excel 模板</button><label class="label" for="dispatch-import-file">选择 Excel 或 CSV 文件</label><input id="dispatch-import-file" type="file" accept=".xlsx,.csv" onchange="readDispatchImport(this.files[0])"><div id="dispatch-import-preview" class="tablewrap"></div><div id="dispatch-import-error" class="error" role="alert"></div></div><div class="dialogfooter"><button onclick="closeModal()">取消</button><button class="primary" onclick="applyDispatchImport()">确认导入并派单</button></div></section></div>`;
+  document.getElementById('modal').innerHTML=`<div class="overlay"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dispatch-import-title" style="width:1000px"><div class="dialoghead"><h2 id="dispatch-import-title">导入数据派单</h2><button aria-label="关闭弹窗" onclick="closeModal()">×</button></div><div class="dialogbody"><p>请使用下方 Excel 模板填写。每行对应一个立项 SKU 的一个检测项目；同一商品编码的多行合并为一个主任务，不同 SKU 分别生成子任务。同一商品的主任务信息须一致。表头注明必填或选填；开票信息在表格单元格内按“发票抬头；税号”填写，商家或二者皆有时两项均必填。确认后任务直接进入待接单。</p><button onclick="downloadDispatchImportTemplate()">下载 Excel 模板</button><label class="label" for="dispatch-import-file">选择 Excel 或 CSV 文件</label><input id="dispatch-import-file" type="file" accept=".xlsx,.csv" onchange="readDispatchImport(this.files[0])"><div id="dispatch-import-preview" class="tablewrap"></div><div id="dispatch-import-error" class="error" role="alert"></div></div><div class="dialogfooter"><button onclick="closeModal()">取消</button><button class="primary" onclick="applyDispatchImport()">确认导入并派单</button></div></section></div>`;
 }
 function downloadDispatchImportTemplate(){
   const a=document.createElement('a');a.href='./导入数据派单模板.xlsx';a.download='导入数据派单模板.xlsx';a.click();
@@ -67,12 +71,12 @@ function applyDispatchImport(){
   for(const rows of products.values()){
     const first=rows[0],agency=first['检测机构'];
     const t=newTask(first['商品编码'],first['抽检类型'],first['任务类型']);
-    t.reason=first['抽检事由'];t.payer=first['费用支出方'];t.invoiceInfo=first['开票信息'];t.subs=[];
+    t.reason=first['抽检事由'];t.payer=first['费用支出方'];const invoice=parseInvoiceText(first['开票信息']);setInvoiceFields(t,invoice.title,invoice.taxNumber);t.subs=[];
     const skus=new Map();
     for(const row of rows){
       const sku=row['立项SKU'];let sub=skus.get(sku);
       if(!sub){const index=skus.size+1;sub={id:t.id+'-'+String(index).padStart(2,'0'),standard:productExecutionStandards(t).join('、'),category:row['立项要求分类'],projects:[],agencyProjects:[],fields:{sku,rush:'否'},payer:'',merchant:'',yuhui:'',reportIssued:false,sent:false};skus.set(sku,sub);t.subs.push(sub);}
-      const project={name:row['检测项目'],method:row['检测方法'],limit:row['判定依据/限值'],group:DISPATCH_PROJECT_TYPES[row['项目类型']],selected:true,contractSource:row['项目来源']||'合同内'};
+      const project={name:row['检测项目'],method:row['检测方法'],limit:row['判定依据/限值'],group:DISPATCH_PROJECT_TYPES[row['项目分类']],itemType:row['项目类型']||'',selected:true,contractSource:row['项目来源']||'合同内'};
       if(row['附加物备注'])project.agencyAttachments={[agency]:row['附加物备注']};
       sub.projects.push(project);
     }

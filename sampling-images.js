@@ -1,6 +1,6 @@
 function samplingOrderImagesHTML(t){
   const images=t.samplingOrderImages||[];
-  return `<div><label>采样订单图片</label>${images.length?images.map((item,i)=>`<button class="link" onclick="previewSamplingOrderImage('${t.id}',${i})">${esc(item.name)}</button>`).join(''):' '}${canEditSamplingDetails(t)?'<button onclick="openSamplingImagesEdit()">编辑图片</button>':''}</div>`;
+  return `<div><label>采样订单图片</label>${images.length?images.map((item,i)=>`<button class="link" onclick="previewSamplingOrderImage('${t.id}',${i})">${esc(item.name)}</button>`).join(''):' '}${canEditSamplingDetails(t)?'<button onclick="openSamplingImagesEdit()">更新图片</button>':''}</div>`;
 }
 function samplingImageInputHTML(){
   return `<label class="label" for="sampling-order-images">采样订单图片（最多10张）</label><input id="sampling-order-images" type="file" accept="image/*" multiple onchange="updateSamplingImageSelection()"><small id="sampling-image-selection">未选择图片</small>`;

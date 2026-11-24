@@ -47,7 +47,7 @@ async function applyBatchAcceptance(){
   const values=new Map();
   for(const [i,t] of chosen.entries()){
     if(!batchEligible(t,config))continue;
-    if(batchAction==='确认接单'&&requiresInvoiceInfo(t.payer)&&!t.invoiceInfo?.trim()){error.textContent=`${t.id}：请先填写开票信息`;return;}if(batchAction==='确认接单'&&t.payer==='商家'){const samples=t.subs.map((s,j)=>({quantity:document.getElementById(`batch-sample-quantity-${i}-${j}`)?.value.trim()||'',description:document.getElementById(`batch-address-${i}-${j}`)?.value.trim()||''}));if(samples.some(v=>v.quantity.length>100||v.description.length>200)){error.textContent=`${t.id}：样品量最多100字，寄样地址最多200字`;return;}values.set(t.id,{samples});}
+    if(batchAction==='确认接单'&&requiresInvoiceInfo(t.payer)&&!invoiceComplete(t)){error.textContent=`${t.id}：请先填写开票信息`;return;}if(batchAction==='确认接单'&&t.payer==='商家'){const samples=t.subs.map((s,j)=>({quantity:document.getElementById(`batch-sample-quantity-${i}-${j}`)?.value.trim()||'',description:document.getElementById(`batch-address-${i}-${j}`)?.value.trim()||''}));if(samples.some(v=>v.quantity.length>100||v.description.length>200)){error.textContent=`${t.id}：样品量最多100字，寄样地址最多200字`;return;}values.set(t.id,{samples});}
     if(['采样成功','采样并核样成功'].includes(batchAction)){
       const raw=document.getElementById('batch-amount-'+i)?.value.trim()||'';
       if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){error.textContent=`${t.id}：请输入不小于 0 且最多两位小数的采样金额`;return;}
