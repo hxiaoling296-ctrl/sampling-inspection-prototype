@@ -7,8 +7,8 @@ function saveMainTaskInfo(){
   const title=mainInfoInput('main-invoice-title')?.value.trim()??invoiceTitleOf(t);
   const taxNumber=mainInfoInput('main-invoice-tax-number')?.value.trim()??invoiceTaxNumberOf(t);
   if(!PAYERS.includes(payer)){error.textContent='请选择费用支出方';return;}
-  if(!invoicePairValid(title,taxNumber)){error.textContent='发票抬头和税号须同时填写';return;}
-  if(requiresInvoiceInfo(payer)&&(!title||!taxNumber)){error.textContent='请填写发票抬头和税号';return;}
+  if(!invoiceLengthValid(title,taxNumber)){error.textContent='开票信息每项不得超过200字';return;}
+  if(requiresInvoiceInfo(payer)&&(!title||!taxNumber)){error.textContent='请填写商家发票信息和邮箱';return;}
   const taskType=mainInfoInput('main-task-type')?.value;
   const inspectionType=mainInfoInput('main-inspection-type')?.value;
   if(taskType&&!TASK_TYPES.includes(taskType)){error.textContent='请选择任务类型';return;}
@@ -16,8 +16,6 @@ function saveMainTaskInfo(){
   const session=mainInfoInput('main-planned-session')?.value.trim();
   const spec=mainInfoInput('main-planned-spec')?.value.trim();
   if((session?.length||0)>35||(spec?.length||0)>100){error.textContent='计划专场最多35字，计划检测规格最多100字';return;}
-  const shipping=mainInfoInput('main-shipping-method')?.value;
-  if(shipping&&!['商家寄样','机构采样','与辉寄样'].includes(shipping)){error.textContent='请选择寄样方式';return;}
   const reviewer=document.querySelector('#main-task-fields [data-main-reviewer]:not(:disabled)')?.value;
   if(reviewer&&!REVIEWERS.includes(reviewer)){error.textContent='请选择报告审核人';return;}
   const amount=mainInfoInput('main-sampling-amount')?.value.trim();
@@ -31,7 +29,7 @@ function saveMainTaskInfo(){
   set('taskType',taskType);set('type',inspectionType);set('plannedSession',session);set('plannedInspectionSpec',spec);
   set('payer',payer);
   if(mainInfoInput('main-invoice-title')||mainInfoInput('main-invoice-tax-number'))setInvoiceFields(t,title,taxNumber);
-  set('shippingMethod',shipping);set('agencyReason',mainInfoInput('main-agency-reason')?.value.trim());set('reportReviewer',reviewer);
+  set('agencyReason',mainInfoInput('main-agency-reason')?.value.trim());set('reportReviewer',reviewer);
   if(remark!==undefined){if(t.dispatchRemark!==remark)t.dispatchRemarkUpdatedAt=new Date().toISOString();t.dispatchRemark=remark;}
   if(amount!==undefined)t.samplingAmount=Number(amount);
   if(fee!==undefined)t.samplingServiceFee=fee===''?'':Number(fee);

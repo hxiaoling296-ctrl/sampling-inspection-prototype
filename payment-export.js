@@ -1,7 +1,7 @@
 const PAYMENT_EXPORT_HEADERS = ['主任务单号','主任务状态','商品编码','商品名称','商品类目','抽检类型','任务类型','费用支出方','开票信息','派单备注','采样金额','采样服务费','子任务单号','子任务状态','检测机构','检测项目','检测方法','附加物备注','判定依据/限值','项目来源','项目计算公式','机构参考报价','机构实际报价','结算金额','项目结算合计','费用合计','商家需支付金额','与辉需支付金额'];
 
 function paymentExportTasks() {
-  return visibleListTasks.filter(t => ['已完成','已完成（异常）'].includes(t.status));
+  return selectedExportTasks().filter(t => ['已完成','已完成（异常）'].includes(t.status));
 }
 
 function paymentExportRows() {
@@ -28,13 +28,13 @@ function paymentExportRows() {
 }
 
 function openPaymentExport() {
-  if (tabFilter !== '全部任务') return;
+  if (tabFilter !== '全部任务' || !requireExportSelection()) return;
   const count = paymentExportRows().length, taskCount = paymentExportTasks().length;
-  document.getElementById('modal').innerHTML = `<div class="overlay"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="payment-export-title" style="width:540px"><div class="dialoghead"><h2 id="payment-export-title">导出款项数据</h2><button onclick="closeModal()">×</button></div><div class="dialogbody"><p>当前筛选结果中有 ${taskCount} 个已完成主任务，共 ${count} 行款项数据。每个检测项目单独占一行。模板第 R 列“附加物备注”对应项目填写的“机构附加物”，未填写时留空。</p>${count ? '' : '<p>当前筛选条件下没有已完成订单。</p>'}</div><div class="dialogfooter"><button onclick="closeModal()">取消</button><button class="primary" onclick="downloadPaymentExport('xlsx')" ${count ? '' : 'disabled'}>导出 Excel</button></div></section></div>`;
+  document.getElementById('modal').innerHTML = `<div class="overlay"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="payment-export-title" style="width:540px"><div class="dialoghead"><h2 id="payment-export-title">导出款项数据</h2><button onclick="closeModal()">×</button></div><div class="dialogbody"><p>已勾选任务中有 ${taskCount} 个已完成主任务，共 ${count} 行款项数据。每个检测项目单独占一行。模板第 R 列“附加物备注”对应项目填写的“机构附加物”，未填写时留空。</p>${count ? '' : '<p>已勾选任务中没有已完成订单。</p>'}</div><div class="dialogfooter"><button onclick="closeModal()">取消</button><button class="primary" onclick="downloadPaymentExport('xlsx')" ${count ? '' : 'disabled'}>导出 Excel</button></div></section></div>`;
 }
 
 async function downloadPaymentExport(format) {
-  if (tabFilter !== '全部任务' || format !== 'xlsx') return;
+  if (tabFilter !== '全部任务' || format !== 'xlsx' || !requireExportSelection()) return;
   const rows = paymentExportRows();
   if (!rows.length) return;
   try {

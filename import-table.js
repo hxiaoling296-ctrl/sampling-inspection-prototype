@@ -42,6 +42,8 @@ function validateImport(rows){
     if(!sub){errors.push(line+'子任务不属于该主任务');continue;}
     if(!isActiveSub(t,sub)){errors.push(line+'无检测项目或未派单的子任务不能导入后续状态');continue;}
     const target=r['主任务状态'],direct=target==='已进单'&&['待采样','核样中'].includes(t.status);
+    if(direct&&activeOrderSubs(t).some(s=>!s.sampleQuantity?.trim()||!merchantAddress(s).trim())){errors.push(line+'直接进单前请在任务详情填写每个子任务的样品量和寄样地址');continue;}
+    if(direct&&Number(r['采样金额']!==''?r['采样金额']:t.samplingAmount||0)!==0&&!(t.samplingOrderImages||[]).length){errors.push(line+'采样金额不为0时，直接进单前请上传采样订单图片');continue;}
     if(!['待采样','核样中'].includes(target)&&!direct)errors.push(line+'主任务状态只能更新为采样中、核样中，或由待采样/核样中直接进单');
     if(direct&&!r['采样金额'])errors.push(line+'直接进单必须填写采样金额');
     const date=r['计划出具报告日期'];
