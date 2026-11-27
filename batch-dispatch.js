@@ -1,6 +1,6 @@
 const batchDispatchSelected=new Set();
 let batchDispatchTaskIds=[];
-function migrateBatchDispatchFields(){let changed=false;for(const t of tasks){if(t.dispatchedAt&&!t.lastDispatchedAgency&&t.agency){t.lastDispatchedAgency=t.agency;changed=true;}const d=t.batchDispatchDraft;if(!d)continue;if(['草稿','待派单','接单失败'].includes(t.status)){t.reportReviewer=d.reviewer||t.reportReviewer||'';t.agency=d.agency||t.agency||'';if(d.shippingMethod)t.subs.forEach(sub=>{sub.shippingMethod||=d.shippingMethod;});t.agencyReason=d.reason||t.agencyReason||'';t.dispatchRemark=d.dispatchRemark||t.dispatchRemark||'';}delete t.batchDispatchDraft;changed=true;}if(changed)save();}
+function migrateBatchDispatchFields(){let changed=false;for(const t of tasks){if(t.dispatchedAt&&!t.lastDispatchedAgency&&t.agency){t.lastDispatchedAgency=t.agency;changed=true;}const d=t.batchDispatchDraft;if(!d)continue;if(['草稿','接单失败'].includes(t.status)){t.reportReviewer=d.reviewer||t.reportReviewer||'';t.agency=d.agency||t.agency||'';if(d.shippingMethod)t.subs.forEach(sub=>{sub.shippingMethod||=d.shippingMethod;});t.agencyReason=d.reason||t.agencyReason||'';t.dispatchRemark=d.dispatchRemark||t.dispatchRemark||'';}delete t.batchDispatchDraft;changed=true;}if(changed)save();}
 function syncBatchDispatchSelection(rows){
   const visible=new Set(tabFilter==='待派单'?rows.map(t=>t.id):[]);
   for(const id of batchDispatchSelected)if(!visible.has(id))batchDispatchSelected.delete(id);
@@ -56,7 +56,7 @@ function updateBatchDispatchPreview(){
     const row=document.querySelector(`[data-batch-dispatch-task="${t.id}"]`);
     if(!row)continue;
     const agency=row.querySelector('[data-batch-agency]').value;
-    const active=agency&&['草稿','待派单','接单失败'].includes(t.status)?activeSubs(t,agency):[];
+    const active=agency&&['草稿','接单失败'].includes(t.status)?activeSubs(t,agency):[];
     const payer=t.payer,invoiceTitle=row.querySelector('[data-batch-invoice-title]').value.trim(),invoiceTax=row.querySelector('[data-batch-invoice-tax]').value.trim();const allowed=agencyAllowedForTask(t,agency)&&active.length>0&&PAYERS.includes(payer)&&invoiceLengthValid(invoiceTitle,invoiceTax)&&(!requiresInvoiceInfo(payer)||(!!invoiceTitle&&!!invoiceTax));
     if(allowed){eligible++;subCount+=active.length;}
     row.classList.toggle('batch-ineligible',!!agency&&!allowed);
@@ -70,7 +70,7 @@ function confirmBatchDispatch(){
   const reason=document.getElementById('batch-dispatch-reason')?.value.trim()||'';
   const dispatchRemark=document.getElementById('batch-dispatch-remark')?.value.trim()||'',error=document.getElementById('batch-dispatch-error');
   if(dispatchRemark.length>200){error.textContent='派单备注最多输入200字';return;}
-  const eligible=batchDispatchTaskIds.map(id=>({t:tasks.find(t=>t.id===id),row:document.querySelector(`[data-batch-dispatch-task="${id}"]`)})).filter(({t,row})=>t&&row&&['草稿','待派单','接单失败'].includes(t.status)&&PAYERS.includes(t.payer)&&(!requiresInvoiceInfo(t.payer)||!!row.querySelector('[data-batch-invoice-title]').value.trim()&&!!row.querySelector('[data-batch-invoice-tax]').value.trim())&&agencyAllowedForTask(t,row.querySelector('[data-batch-agency]').value)&&activeSubs(t,row.querySelector('[data-batch-agency]').value).length);
+  const eligible=batchDispatchTaskIds.map(id=>({t:tasks.find(t=>t.id===id),row:document.querySelector(`[data-batch-dispatch-task="${id}"]`)})).filter(({t,row})=>t&&row&&['草稿','接单失败'].includes(t.status)&&PAYERS.includes(t.payer)&&(!requiresInvoiceInfo(t.payer)||!!row.querySelector('[data-batch-invoice-title]').value.trim()&&!!row.querySelector('[data-batch-invoice-tax]').value.trim())&&agencyAllowedForTask(t,row.querySelector('[data-batch-agency]').value)&&activeSubs(t,row.querySelector('[data-batch-agency]').value).length);
   if(!eligible.length){error.textContent='所选主任务没有可派的检测项目';return;}
   if(eligible.some(({t,row})=>activeSubs(t,row.querySelector('[data-batch-agency]').value).some(s=>!s.category?.trim()))){error.textContent='请先补全可派子任务的立项要求分类';return;}
   if(eligible.some(({row})=>{const values=batchDispatchRowValues(row);return !REVIEWERS.includes(values.reviewer)||!agencyAllowedForTask(tasks.find(t=>t.id===row.closest('[data-batch-dispatch-task]').dataset.batchDispatchTask),values.agency)||activeSubs(tasks.find(t=>t.id===row.closest('[data-batch-dispatch-task]').dataset.batchDispatchTask),values.agency).some(sub=>!SHIPPING_METHODS.includes(values.shippingMethods[sub.id]))})){error.textContent='请补全可派主任务的报告审核人、派单机构及各子任务的寄样方式';return;}

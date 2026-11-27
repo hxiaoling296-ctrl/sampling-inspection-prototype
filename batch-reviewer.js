@@ -1,5 +1,5 @@
 let batchReviewerTaskIds = [];
-function canBatchChangeReviewer(t){return !!t&&['草稿','待派单','接单失败','待接单','待采样','核样中','已进单'].includes(t.status);}
+function canBatchChangeReviewer(t){return !!t&&['草稿','接单失败','待接单','待采样','核样中','已进单'].includes(t.status);}
 
 function openBatchReviewer() {
   if (portalMode !== 'business' || !['全部任务', '待审核'].includes(tabFilter)) return;

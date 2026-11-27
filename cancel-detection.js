@@ -1,6 +1,6 @@
 const CANCELED_DETECTION_STATUS='取消检测';
 function isCanceledDetection(s){return s?.acceptanceStatus===CANCELED_DETECTION_STATUS;}
-function canCancelDetection(t,s){return !!(t&&s&&isActiveSub(t,s)&&!s.reportIssued&&!s.reportStatus&&!(s.reportFiles||[]).length&&['核样中','已进单'].includes(s.acceptanceStatus)&&['核样中','已进单'].includes(t.status));}
+function canCancelDetection(t,s){return !!(t&&s&&isActiveSub(t,s)&&!s.reportIssued&&!s.reportStatus&&!(s.reportFiles||[]).length&&s.acceptanceStatus==='核样中'&&['核样中','已进单'].includes(t.status));}
 function canRestoreDetection(t,s){return !!(t&&s&&isActiveSub(t,s)&&isCanceledDetection(s)&&['待采样','核样中','已进单'].includes(t.status));}
 function canRecheckRestoredSub(t,s){return !!(t&&s&&t.status==='已进单'&&isActiveSub(t,s)&&!isCanceledDetection(s)&&s.acceptanceStatus==='核样中'&&!s.reportIssued);}
 function canUploadReportSub(s){return !!s&&!isCanceledDetection(s)&&s.acceptanceStatus!=='核样中'&&!isReviewed(s);}
